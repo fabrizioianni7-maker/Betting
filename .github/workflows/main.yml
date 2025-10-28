@@ -1,0 +1,127 @@
+name: Predictor Suite (Calcio & Tennis)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "src/**"
+      - "configs/**"
+      - "requirements.txt"
+      - ".github/workflows/**"
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: predictor-suite
+  cancel-in-progress: false
+
+jobs:
+  build-train-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install deps
+        run: pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Prepare folders
+        run: |
+          mkdir -p data/raw data/processed models reports artifacts
+
+      - name: Build dataset (Calcio)
+        run: |
+          python -m src.cli.build_dataset \
+            --sport calcio \
+            --years 2020-2025 \
+            --out data/processed/soccer.parquet
+
+      - name: Build dataset (Tennis)
+        run: |
+          python -m src.cli.build_dataset \
+            --sport tennis \
+            --years 2020-2025 \
+            --out data/processed/tennis.parquet
+
+      - name: Align odds (Calcio)
+        continue-on-error: true
+        run: |
+          python -m src.cli.align_odds \
+            --sport calcio \
+            --input data/processed/soccer.parquet \
+            --out data/processed/soccer_with_odds.parquet
+
+      - name: Align odds (Tennis)
+        continue-on-error: true
+        run: |
+          python -m src.cli.align_odds \
+            --sport tennis \
+            --input data/processed/tennis.parquet \
+            --out data/processed/tennis_with_odds.parquet
+
+      - name: Train (Calcio)
+        run: |
+          python -m src.cli.train \
+            --sport calcio \
+            --cfg configs/markets.yaml \
+            --data data/processed/soccer_with_odds.parquet \
+            --model-out models/soccer_v1.pkl
+
+      - name: Train (Tennis)
+        run: |
+          python -m src.cli.train \
+            --sport tennis \
+            --cfg configs/markets.yaml \
+            --data data/processed/tennis_with_odds.parquet \
+            --model-out models/tennis_v1.pkl
+
+      - name: Evaluate (Calcio)
+        run: |
+          python -m src.cli.evaluate \
+            --sport calcio \
+            --model models/soccer_v1.pkl \
+            --data data/processed/soccer_with_odds.parquet \
+            --out reports/soccer_metrics.json
+
+      - name: Evaluate (Tennis)
+        run: |
+          python -m src.cli.evaluate \
+            --sport tennis \
+            --model models/tennis_v1.pkl \
+            --data data/processed/tennis_with_odds.parquet \
+            --out reports/tennis_metrics.json
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          if-no-files-found: warn
+          path: |
+            data/processed/*.parquet
+            models/*.pkl
+            reports/*.json
+
+      - name: Auto-commit reports & models
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "ci: update datasets, models, reports"
+          file_pattern: |
+            data/processed/*.parquet
+            models/*.pkl
+            reports/*.json
