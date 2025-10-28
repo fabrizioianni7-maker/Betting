@@ -1,0 +1,7 @@
+
+calcio:
+  1x2: {target: result_1x2}
+  btts: {target: btts}
+  over_under_2_5: {target: ou_2_5}
+tennis:
+  match_winner: {target: winner}

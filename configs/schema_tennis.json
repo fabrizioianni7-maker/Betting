@@ -1,0 +1,26 @@
+{
+  "required_columns": [
+    "match_id",
+    "date",
+    "tour",
+    "tournament",
+    "round",
+    "surface",
+    "best_of",
+    "player1",
+    "player2",
+    "winner",
+    "p1_aces",
+    "p2_aces",
+    "p1_df",
+    "p2_df",
+    "p1_bp_faced",
+    "p1_bp_saved",
+    "p2_bp_faced",
+    "p2_bp_saved"
+  ],
+  "optional": [
+    "p1_elo",
+    "p2_elo"
+  ]
+}

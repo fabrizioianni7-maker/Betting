@@ -1,0 +1,28 @@
+{
+  "required_columns": [
+    "match_id",
+    "date",
+    "league",
+    "season",
+    "home_team",
+    "away_team",
+    "home_goals",
+    "away_goals",
+    "home_shots",
+    "away_shots",
+    "home_on_target",
+    "away_on_target",
+    "home_cards",
+    "away_cards",
+    "home_corners",
+    "away_corners",
+    "home_xg",
+    "away_xg"
+  ],
+  "optional": [
+    "attendance",
+    "referee",
+    "home_elo",
+    "away_elo"
+  ]
+}
